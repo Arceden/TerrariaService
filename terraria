@@ -2,15 +2,27 @@
 ## Terraria service script
 
 ## Vars
-WRITE_DIR=/opt/terraria-service/
+DEBUGGING=true
+WRITE_DIR=/opt/terraria-service
+PIDFILE="${WRITE_DIR}/server.pid"
+CURRENT_USER=`whoami`
+USERNAME=server #temporary
+
 
 ## Debugger
 debug()
 {
 	echo "Debugger"
-	echo -e "WRITE_DIR:\t" ${WRITE_DIR}
+	echo -e "USERNAME:\t${USERNAME}"
+	echo -e "CURRENT_USER:\t${CURRENT_USER}"
+	echo -e "WRITE_DIR:\t${WRITE_DIR}"
+	echo -e "PIDFILE:\t${PIDFILE}"
 	echo
 }
+if $DEBUGGING; then
+	debug
+fi
+
 
 ## Usage display
 usage()
@@ -23,19 +35,42 @@ usage()
 	echo -e "  help\t\t Show this help message"
 }
 
-## Test function
-test()
+
+# Execute for User
+## Helper function
+## Executes the provided command
+exec_user()
 {
-	echo "Test message!"
+	if [ $CURRENT_USER == $USERNAME ]; then 		# Are you the terraria user?
+		echo "Executing ${1}"
+		bash -c "$1"
+	elif [ "$(id -u)" == "0" ]; then			# Are you root?
+		echo "Please do not run this as root!"
+	else							# You are neither
+		echo "Run this script as the $USERNAME user!"
+		exit 1
+	fi
 }
 
-debug
+
+# Start script
+## Creates a new PID file
+start()
+{
+	if exec_user "touch ${PIDFILE}" ; then
+		echo "Success?"
+		exit 1;
+	fi
+
+	echo "fail?"
+	exit 1
+}
+
 
 ## Routing
 case "$1" in
 	start)
-		echo "Starting the server.."
-		echo "Could not start the server (code not implemented)"
+		start
 		;;
 	stop)
 		echo "Stopping the server.."
