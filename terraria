@@ -14,6 +14,7 @@ ARGS="-config serverconfig.txt"
 
 INVOKE="${BINARY} ${ARGS}"
 
+FIFO="${WRITE_DIR}/server.fifo"
 if [ -z "${CMDOUT}" ]; then
 	CMDOUT="${WRITE_DIR}/server.out"
 fi
@@ -28,8 +29,8 @@ debug()
 	echo -e "  CURRENT_USER:\t${CURRENT_USER}"
 	echo -e "  WRITE_DIR:\t${WRITE_DIR}"
 	echo -e "  PIDFILE:\t${PIDFILE}"
-	echo -e "  LOGFILE:\t${LOGFILE}"
-	echo -e "  ERRFILE:\t${ERRFILE}"
+	echo -e "  ERRLOG:\t${ERRLOG}"
+	echo -e "  LOG:\t${CMDOUT}"
 	echo
 }
 if $DEBUGGING; then
@@ -53,6 +54,7 @@ usage()
 # Execute for User
 ## Helper function
 ## Executes the provided command
+## TODO: Propper user checks
 exec_user()
 {
 	if [ $CURRENT_USER == $USERNAME ]; then 		# Are you the terraria user?
@@ -70,18 +72,18 @@ exec_user()
 
 # Start script
 ## Creates a new PID file
-start()
+start_service()
 {
 	# Check if file exists
 	if [ -f ${PIDFILE} ]; then
 		echo "File already exists!"
-		exit 1;
+		return 1
 	fi
 
 	# Create new PIDFILE
 	if ! exec_user "touch ${PIDFILE}" ; then
-		echo "Failed?"
-		exit 1;
+		echo "Could not create a new PID file"
+		return 1
 	fi
 
 	# Create error log
@@ -89,22 +91,40 @@ start()
 		echo "Error log does not exist! Making a new one"
 		if ! exec_user "touch ${ERRLOG}"; then
 			echo "Could not make a error log file!"
-			exit 1;
+			return 1;
 		fi
+	fi
+
+	# FIFO file?
+	if ! [ -f ${FIFO} ]; then
+		exec_user "touch ${FIFO}"
 	fi
 	
 	# Attempt to start the process along with the PID into the PIDFILE
-	# Invoke
-	exec_user "${INVOKE} >> ${CMDOUT} 2> ${ERRLOG} & echo \$! > ${PIDFILE}"
-	echo "Started server!"
+	exec_user "tail -f ${FIFO} | ${INVOKE} >> ${CMDOUT} 2>&1 & echo \$! > ${PIDFILE}"
 
-	exit 0
+	# Check if online
+	if [ "$?" -ne "0" ]; then
+		echo "Unable to start ${SERVICE_NAME}"
+		return 1
+	else
+		echo "Started ${SERVICE_NAME}, please see log for details"
+	fi
 }
 
 
-# Kill
-## Kill the process
-kill()
+# Stop script
+## Stops the server
+stop_service()
+{
+	echo "Stopping server.."
+	terraria_command "exit"
+}
+
+
+# Kill service
+## TODO: Check if service is running
+kill_service()
 {
 	echo "Killing server process.."
 	exec_user "kill -TERM $(cat ${PIDFILE} 2> /dev/null) 2> /dev/null"
@@ -112,20 +132,45 @@ kill()
 }
 
 
+# Save game
+## TODO: Check if server is running
+save()
+{
+	echo "Saving game.."
+	terraria_command "save"
+}
+
+
+# Execute server command
+terraria_command()
+{
+	echo $1 >> ${FIFO}	# Send command to file
+	sleep 1s
+	> ${FIFO}		# Clear file
+}
+
+
 ## Routing
 case "$1" in
 	start)
-		start
+		if ! start_service; then
+			echo "Could not start $SERVICE_NAME"
+			exit 1
+		else
+			exit 0
+		fi
 		;;
 	stop)
-		echo "Stopping the server.."
-		echo "Could not stop the server (code not implemented)"
+		stop_service
+		;;
+	save)
+		save
 		;;
 	help|--help|-h)
 		usage
 		;;
 	kill)
-		kill
+		kill_service
 		;;
 	*)
 		echo "Unknown command"
