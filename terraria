@@ -13,10 +13,10 @@ USERNAME=server #temporary
 debug()
 {
 	echo "Debugger"
-	echo -e "USERNAME:\t${USERNAME}"
-	echo -e "CURRENT_USER:\t${CURRENT_USER}"
-	echo -e "WRITE_DIR:\t${WRITE_DIR}"
-	echo -e "PIDFILE:\t${PIDFILE}"
+	echo -e "  USERNAME:\t${USERNAME}"
+	echo -e "  CURRENT_USER:\t${CURRENT_USER}"
+	echo -e "  WRITE_DIR:\t${WRITE_DIR}"
+	echo -e "  PIDFILE:\t${PIDFILE}"
 	echo
 }
 if $DEBUGGING; then
@@ -57,13 +57,25 @@ exec_user()
 ## Creates a new PID file
 start()
 {
-	if exec_user "touch ${PIDFILE}" ; then
-		echo "Success?"
+	# Check if file exists
+	if [ -f ${PIDFILE} ]; then
+		echo "File already exists!"
 		exit 1;
 	fi
 
-	echo "fail?"
-	exit 1
+	# Create new PIDFILE
+	if ! exec_user "touch ${PIDFILE}" ; then
+		echo "Failed?"
+		exit 1;
+	fi
+
+	
+	# Attempt to start the process along with the PID into the PIDFILE
+	# Invoke
+	exec_user "/opt/terraria/tModloaderServer & echo \$! > ${PIDFILE}"
+	echo "Started server!"
+
+	exit 0
 }
 
 
