@@ -5,8 +5,15 @@
 DEBUGGING=true
 WRITE_DIR=/opt/terraria-service
 PIDFILE="${WRITE_DIR}/server.pid"
+LOGFILE="${WRITE_DIR}/log.txt"
+ERRFILE="${WRITE_DIR}/err-log.txt"
 CURRENT_USER=`whoami`
 USERNAME=server #temporary
+
+BINARY=/opt/terraria/tModLoaderServer
+ARGS="-config serverconfig.txt"
+
+INVOKE="${BINARY} ${ARGS}"
 
 
 ## Debugger
@@ -17,6 +24,8 @@ debug()
 	echo -e "  CURRENT_USER:\t${CURRENT_USER}"
 	echo -e "  WRITE_DIR:\t${WRITE_DIR}"
 	echo -e "  PIDFILE:\t${PIDFILE}"
+	echo -e "  LOGFILE:\t${LOGFILE}"
+	echo -e "  ERRFILE:\t${ERRFILE}"
 	echo
 }
 if $DEBUGGING; then
@@ -32,6 +41,7 @@ usage()
 	echo "Commands:"
 	echo -e "  start\t\t Starts the server"
 	echo -e "  stop\t\t Stops the server"
+	echo -e "  kill\t\t Kills the server process"
 	echo -e "  help\t\t Show this help message"
 }
 
@@ -69,13 +79,40 @@ start()
 		exit 1;
 	fi
 
+	# Create log
+	if ! [ -f ${LOGFILE} ]; then
+		echo "Log does not exist! Making a new one"
+		if ! exec_user "touch ${LOGFILE}" ; then
+			echo "Could not make a log file!"
+			exit 1;
+		fi
+	fi
+
+	# Create error log
+	if ! [ -f ${ERRFILE} ]; then
+		echo "Error log does not exist! Making a new one"
+		if ! exec_user "touch ${ERRFILE}"; then
+			echo "Could not make a error log file!"
+			exit 1;
+		fi
+	fi
 	
 	# Attempt to start the process along with the PID into the PIDFILE
 	# Invoke
-	exec_user "/opt/terraria/tModloaderServer & echo \$! > ${PIDFILE}"
+	exec_user "${INVOKE} > ${LOGFILE} 2> ${ERRFILE} & echo \$! > ${PIDFILE}"
 	echo "Started server!"
 
 	exit 0
+}
+
+
+# Kill
+## Kill the process
+kill()
+{
+	echo "Killing server process.."
+	exec_user "kill -TERM $(cat ${PIDFILE} 2> /dev/null) 2> /dev/null"
+	exec_user "rm ${PIDFILE} 2> /dev/null"
 }
 
 
@@ -90,6 +127,9 @@ case "$1" in
 		;;
 	help|--help|-h)
 		usage
+		;;
+	kill)
+		kill
 		;;
 	*)
 		echo "Unknown command"
