@@ -1,0 +1,17 @@
+[Unit]
+Description=Terraria server service
+Wants=network-online.target
+After=network.target network-online.target
+
+[Service]
+User=terraria
+Group=terraria
+
+PIDFile=/opt/terraria/server.pid
+
+Type=forking
+ExecStart=/opt/terraria-service/terraria start
+ExecStop=/opt/terraria-service/terraria stop
+
+[Install]
+WantedBy=multi-user.target

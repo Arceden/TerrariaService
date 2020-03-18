@@ -1,0 +1,54 @@
+#!/bin/bash
+## Terraria service script
+
+## Vars
+WRITE_DIR=/opt/terraria-service/
+
+## Debugger
+debug()
+{
+	echo "Debugger"
+	echo -e "WRITE_DIR:\t" ${WRITE_DIR}
+	echo
+}
+
+## Usage display
+usage()
+{
+	echo "Usage: $0 <COMMAND>"
+	echo
+	echo "Commands:"
+	echo -e "  start\t\t Starts the server"
+	echo -e "  stop\t\t Stops the server"
+	echo -e "  help\t\t Show this help message"
+}
+
+## Test function
+test()
+{
+	echo "Test message!"
+}
+
+debug
+
+## Routing
+case "$1" in
+	start)
+		echo "Starting the server.."
+		echo "Could not start the server (code not implemented)"
+		;;
+	stop)
+		echo "Stopping the server.."
+		echo "Could not stop the server (code not implemented)"
+		;;
+	help|--help|-h)
+		usage
+		;;
+	*)
+		echo "Unknown command"
+		usage
+		exit 1
+		;;
+esac
+
+exit 0
