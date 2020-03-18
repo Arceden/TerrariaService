@@ -4,10 +4,10 @@ Wants=network-online.target
 After=network.target network-online.target
 
 [Service]
-User=terraria
-Group=terraria
+User=server
+Group=server
 
-PIDFile=/opt/terraria/server.pid
+PIDFile=/opt/terraria-service/server.pid
 
 Type=forking
 ExecStart=/opt/terraria-service/terraria start

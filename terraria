@@ -5,15 +5,19 @@
 DEBUGGING=true
 WRITE_DIR=/opt/terraria-service
 PIDFILE="${WRITE_DIR}/server.pid"
-LOGFILE="${WRITE_DIR}/log.txt"
-ERRFILE="${WRITE_DIR}/err-log.txt"
+ERRLOG="${WRITE_DIR}/errors.log"
 CURRENT_USER=`whoami`
-USERNAME=server #temporary
+USERNAME=server
 
 BINARY=/opt/terraria/tModLoaderServer
 ARGS="-config serverconfig.txt"
 
 INVOKE="${BINARY} ${ARGS}"
+
+if [ -z "${CMDOUT}" ]; then
+	CMDOUT="${WRITE_DIR}/server.out"
+fi
+
 
 
 ## Debugger
@@ -52,10 +56,11 @@ usage()
 exec_user()
 {
 	if [ $CURRENT_USER == $USERNAME ]; then 		# Are you the terraria user?
-		echo "Executing ${1}"
+		echo "Executing: ${1}"
 		bash -c "$1"
 	elif [ "$(id -u)" == "0" ]; then			# Are you root?
-		echo "Please do not run this as root!"
+		echo "Executing as ROOT: ${1}"
+		su $USERNAME -s /bin/bash -c "$1"
 	else							# You are neither
 		echo "Run this script as the $USERNAME user!"
 		exit 1
@@ -79,19 +84,10 @@ start()
 		exit 1;
 	fi
 
-	# Create log
-	if ! [ -f ${LOGFILE} ]; then
-		echo "Log does not exist! Making a new one"
-		if ! exec_user "touch ${LOGFILE}" ; then
-			echo "Could not make a log file!"
-			exit 1;
-		fi
-	fi
-
 	# Create error log
-	if ! [ -f ${ERRFILE} ]; then
+	if ! [ -f ${ERRLOG} ]; then
 		echo "Error log does not exist! Making a new one"
-		if ! exec_user "touch ${ERRFILE}"; then
+		if ! exec_user "touch ${ERRLOG}"; then
 			echo "Could not make a error log file!"
 			exit 1;
 		fi
@@ -99,7 +95,7 @@ start()
 	
 	# Attempt to start the process along with the PID into the PIDFILE
 	# Invoke
-	exec_user "${INVOKE} > ${LOGFILE} 2> ${ERRFILE} & echo \$! > ${PIDFILE}"
+	exec_user "${INVOKE} >> ${CMDOUT} 2> ${ERRLOG} & echo \$! > ${PIDFILE}"
 	echo "Started server!"
 
 	exit 0
