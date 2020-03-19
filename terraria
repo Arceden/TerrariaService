@@ -5,13 +5,17 @@
 if [ -f config.cfg ]; then
 	source config.cfg
 else
-	echo "config.cfg file not found! Creating new one.."
+	# Could not find the config, create new one
 	cp config.cfg.example config.cfg
 
 	if ! [ -f config.cfg ]; then
-		echo "Could not create new config file, using defaults.."
+		echo "Could not create new config file"
+		exit 1
 	else
-		source config.cfg
+		echo "New file added: config.cfg"
+		echo "Edit the config.cfg file and start the script again."
+		exit 0
+		# source config.cfg
 	fi
 fi
 
@@ -86,6 +90,13 @@ check_files()
 	PERMISSIONS_ERR=0
 	MISSING_CONFIG=false
 
+	# Terraria server
+	if ! [ -d ${TERRARIA_PATH} ] ; then
+		echo "Could not find the terraria server directory at ${TERRARIA_PATH}."
+		echo "Make sure that you have downloaded the terraria dedicated server from https://terraria.org before starting the service."
+		exit 1
+	fi
+
 	# Service folder permissions
 	## Not using the compact [-w ${WRITE_DIR} so i can test the user]
 	if ! exec_user "test -w ${WRITE_DIR}" ; then
@@ -159,13 +170,13 @@ fix_permissions()
 # Init new server config
 init_terraria_config()
 {
-	read -r -p "Want to init a new simple terraria config? [y/N] " response
+	read -r -p "Want to generate a new simple terraria config? [y/N] " response
 	case "$response" in
 		[yY][eE][sS]|[yY]) 
 			
 			# Create new file
 			echo "maxplayers=8" > ${TERRARIA_CONFIG}
-			echo "autocreate=1" >> ${TERRARIA_CONFIG}
+			echo "autocreate=2" >> ${TERRARIA_CONFIG}
 			echo "difficulty=0" >> ${TERRARIA_CONFIG}
 			echo "world=NewWorld" >> ${TERRARIA_CONFIG}
 			echo "worldname=NewWorld" >> ${TERRARIA_CONFIG}
