@@ -5,10 +5,10 @@ Description=Terraria server service
 User=terraria
 Group=terraria
 
-PIDFile=/opt/terraria-service/server.pid
+PIDFile=/opt/TerrariaService/server.pid
 
 Type=forking
 TimeoutStartSec=20
-ExecStart=/opt/terraria-service/terraria start
+ExecStart=/opt/TerrariaService/terraria start
 TimeoutStopSec=20
-ExecStop=/opt/terraria-service/terraria stop
+ExecStop=/opt/TerrariaService/terraria stop

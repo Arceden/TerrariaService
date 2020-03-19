@@ -80,6 +80,8 @@ usage()
 	echo "Commands:"
 	echo -e "  start\t\t Starts the server"
 	echo -e "  stop\t\t Stops the server"
+	echo -e "  save\t\t Saves the world"
+	echo -e "  checkfiles\t Checks the files for any issues"
 	echo -e "  state\t\t Displays the server state"
 	echo -e "  kill\t\t Kills the server process"
 	echo -e "  help\t\t Show this help message"
@@ -178,10 +180,12 @@ init_terraria_config()
 			
 			# Create new file
 			echo "maxplayers=8" > ${TERRARIA_CONFIG}
+			echo "world=${TERRARIA_PATH}/Worlds/NewWorld.wld" >> ${TERRARIA_CONFIG}
+			echo "worldname=NewWorld" >> ${TERRARIA_CONFIG}
+			echo "worldpath=${TERRARIA_PATH}/Worlds/" >> ${TERRARIA_CONFIG}
+
 			echo "autocreate=2" >> ${TERRARIA_CONFIG}
 			echo "difficulty=0" >> ${TERRARIA_CONFIG}
-			echo "world=NewWorld" >> ${TERRARIA_CONFIG}
-			echo "worldname=NewWorld" >> ${TERRARIA_CONFIG}
 
 			echo "Created new file: ${TERRARIA_CONFIG}"
 
@@ -333,7 +337,7 @@ fi
 ## Routing
 case "$1" in
 	start)
-		checkfiles
+		check_files
 
 		if is_running; then
 			echo "Could not start the terraria server: Server is already running"
@@ -350,6 +354,9 @@ case "$1" in
 		;;
 	save)
 		save
+		;;
+	checkfiles)
+		check_files
 		;;
 	state)
 		if is_running ; then
