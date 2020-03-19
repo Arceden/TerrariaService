@@ -1,15 +1,17 @@
 #!/bin/bash
 ## Terraria service script
 
+CONFIG_PATH=`readlink -e $0 | sed "s:[^/]*$:config.cfg:"`
+
 ## Import configuration file
-if [ -f config.cfg ]; then
-	source config.cfg
+if [ -f $CONFIG_PATH ]; then
+	source $CONFIG_PATH
 else
 	# Could not find the config, create new one
-	cp config.cfg.example config.cfg
+	cp $CONFIG_PATH.example $CONFIG_PATH
 
-	if ! [ -f config.cfg ]; then
-		echo "Could not create new config file"
+	if ! [ -f $CONFIG_PATH ]; then
+		echo "Could not create new config file in: $PWD"
 		exit 1
 	else
 		echo "New file added: config.cfg"
@@ -327,12 +329,12 @@ if $DEBUGGING; then
 	debug
 fi
 
-check_files
-
 
 ## Routing
 case "$1" in
 	start)
+		checkfiles
+
 		if is_running; then
 			echo "Could not start the terraria server: Server is already running"
 			exit 1
