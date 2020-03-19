@@ -1,41 +1,62 @@
 #!/bin/bash
 ## Terraria service script
 
-## Vars
-DEBUGGING=true
-WRITE_DIR=/opt/terraria-service
-PIDFILE="${WRITE_DIR}/server.pid"
-ERRLOG="${WRITE_DIR}/errors.log"
-CURRENT_USER=`whoami`
-USERNAME=server
-
-BINARY=/opt/terraria/tModLoaderServer
-ARGS="-config serverconfig.txt"
-
-INVOKE="${BINARY} ${ARGS}"
-
-FIFO="${WRITE_DIR}/server.fifo"
-if [ -z "${CMDOUT}" ]; then
-	CMDOUT="${WRITE_DIR}/server.out"
+## Import configuration file
+if [ -f config.cfg ]; then
+	source config.cfg
+else
+	echo "Could not find the config file! Using defaults.."
 fi
 
+
+## Default values
+init()
+{
+	if [ -z "${DEBUGGING}" ]; then
+		DEBUGGING=true
+	fi
+
+	if [ -z "${WRITE_DIR}" ]; then
+		WRITE_DIR=/opt/terraria-service
+	fi
+
+	if [ -z "${TERRARIA_PATH}" ]; then
+		TERRARIA_PATH=/opt/terraria
+	fi
+
+	if [ -z "${TERRARIA_BINARY}" ]; then
+		TERRARIA_BINARY=TerrariaServer
+	fi
+
+	CURRENT_USER=`whoami`
+	
+	FIFO="${WRITE_DIR}/server.fifo"		# First in, First out file for commands
+	CMDOUT="${WRITE_DIR}/server.out"	# Server output log
+	PIDFILE="${WRITE_DIR}/server.pid"	# Server proces ID
+	ERRLOG="${WRITE_DIR}/errors.log"	# Error log
+
+	TERRARIA_CONFIG="${TERRARIA_PATH}/serverconfig.txt"
+
+	ARGS="-config serverconfig.txt"		# Server requires a server config to instantly boot
+	INVOKE="${TERRARIA_PATH}/${TERRARIA_BINARY} ${ARGS}"
+}
+init
 
 
 ## Debugger
 debug()
 {
 	echo "Debugger"
-	echo -e "  USERNAME:\t${USERNAME}"
-	echo -e "  CURRENT_USER:\t${CURRENT_USER}"
-	echo -e "  WRITE_DIR:\t${WRITE_DIR}"
-	echo -e "  PIDFILE:\t${PIDFILE}"
-	echo -e "  ERRLOG:\t${ERRLOG}"
-	echo -e "  LOG:\t${CMDOUT}"
+	echo -e "  USERNAME:\t\t${USERNAME}"
+	echo -e "  CURRENT_USER:\t\t${CURRENT_USER}"
+	echo -e "  TERRARIA_PATH:\t${TERRARIA_PATH}"
+	echo -e "  TERRARIA_BINARY:\t${TERRARIA_BINARY}"
+	echo -e "  WRITE_DIR:\t\t${WRITE_DIR}"
+	echo -e "  PIDFILE:\t\t${PIDFILE}"
+	echo -e "  ERRLOG:\t\t${ERRLOG}"
+	echo -e "  LOG:\t\t\t${CMDOUT}"
 	echo
 }
-if $DEBUGGING; then
-	debug
-fi
 
 
 ## Usage display
@@ -51,17 +72,105 @@ usage()
 }
 
 
+# Check file status
+check_files()
+{
+	# Service folder permissions
+	## Not using the compact [-w ${WRITE_DIR} so i can test the user]
+	if ! exec_user "test -w ${WRITE_DIR}" ; then
+		echo "Missing write permissions: ${WRITE_DIR}"
+
+		fix_permissions
+	fi
+
+	# Server folder permissions
+	if ! exec_user "test -w ${TERRARIA_PATH}" ; then
+		echo "Missing write permissions: ${TERRARIA_PATH}"
+		
+		fix_permissions
+	fi
+
+	# Terraria server config
+	if ! [ -f ${TERRARIA_CONFIG} ] ; then
+		echo "Missing file: ${TERRARIA_CONFIG}"
+		init_terraria_config
+	elif ! exec_user "test -r ${TERRARIA_CONFIG}" ; then
+		echo "Missing permissions: ${TERRARIA_CONFIG}"
+		
+		fix_permissions
+	fi
+
+	# Terraria executable permissions
+	if ! [ -x ${TERRARIA_PATH}/${TERRARIA_BINARY} ] ; then
+		echo "Missing executable permissions: ${TERRARIA_PATH}/${TERRARIA_BINARY}"
+		
+		fix_permissions
+	fi
+}
+
+# Attempt to fix the permissions
+fix_permissions()
+{
+	read -r -p "Attempt to auto-fix permissions? [y/N] " response
+	case "$response" in
+		[yY][eE][sS]|[yY]) 
+			
+			# Set user permissions to the whole terraria path
+			chown -R $USERNAME:$USERNAME ${TERRARIA_PATH}
+
+			# Set user permissions to the whole service path
+			chown -R $USERNAME:$USERNAME ${WRITE_DIR}
+
+			# Set executable permissions on the binary
+			chmod +x ${TERRARIA_PATH}/${TERRARIA_BINARY}
+
+			check_files
+			;;
+		*)
+			exit 1
+			;;
+	esac
+}
+
+# Init new server config
+init_terraria_config()
+{
+	read -r -p "Want to init a new simple terraria config? [y/N] " response
+	case "$response" in
+		[yY][eE][sS]|[yY]) 
+			
+			# Create new file
+			echo "maxplayers=8" > ${TERRARIA_CONFIG}
+			echo "autocreate=1" >> ${TERRARIA_CONFIG}
+			echo "difficulty=0" >> ${TERRARIA_CONFIG}
+			echo "world=NewWorld" >> ${TERRARIA_CONFIG}
+			echo "worldname=NewWorld" >> ${TERRARIA_CONFIG}
+
+			echo "Created new file: ${TERRARIA_CONFIG}"
+			;;
+		*)
+			exit 1
+			;;
+	esac
+}
+
+
 # Execute for User
 ## Helper function
 ## Executes the provided command
-## TODO: Propper user checks
 exec_user()
 {
 	if [ $CURRENT_USER == $USERNAME ]; then 		# Are you the terraria user?
-		echo "Executing: ${1}"
+		if $DEBUGGING; then
+			echo "Executing: ${1}"
+		fi
+
 		bash -c "$1"
 	elif [ "$(id -u)" == "0" ]; then			# Are you root?
-		echo "Executing as ROOT: ${1}"
+		if $DEBUGGING; then
+			echo "Executing as ROOT: ${1}"
+		fi
+
 		su $USERNAME -s /bin/bash -c "$1"
 	else							# You are neither
 		echo "Run this script as the $USERNAME user!"
@@ -108,17 +217,18 @@ start_service()
 		echo "Unable to start ${SERVICE_NAME}"
 		return 1
 	else
-		echo "Started ${SERVICE_NAME}, please see log for details"
+		echo "Started the server, please see log for details (${CMDOUT})"
 	fi
 }
 
 
-# Stop script
-## Stops the server
+# Stop service
 stop_service()
 {
 	echo "Stopping server.."
 	terraria_command "exit"
+
+	## TODO: Cleanly close FIFO tail
 }
 
 
@@ -150,11 +260,19 @@ terraria_command()
 }
 
 
+## Middleware
+if $DEBUGGING; then
+	debug
+fi
+
+check_files
+
+
 ## Routing
 case "$1" in
 	start)
 		if ! start_service; then
-			echo "Could not start $SERVICE_NAME"
+			echo "Could not start the terraria server"
 			exit 1
 		else
 			exit 0

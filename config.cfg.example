@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# Enable debugging
+DEBUGGING=false
+
+## Terraria Server
+# Absolute path to terraria server
+TERRARIA_PATH=/opt/terraria
+
+# Terraria server executable
+TERRARIA_BINARY=TerrariaServer.bin.x86_64
+
+## Service
+# Service path
+WRITE_DIR=~/opt/TerrariaService
+
+# User to run the service with
+USERNAME=terraria

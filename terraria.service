@@ -2,8 +2,8 @@
 Description=Terraria server service
 
 [Service]
-User=server
-Group=server
+User=terraria
+Group=terraria
 
 PIDFile=/opt/terraria-service/server.pid
 
