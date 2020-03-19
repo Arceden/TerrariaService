@@ -5,7 +5,14 @@
 if [ -f config.cfg ]; then
 	source config.cfg
 else
-	echo "Could not find the config file! Using defaults.."
+	echo "config.cfg file not found! Creating new one.."
+	cp config.cfg.example config.cfg
+
+	if ! [ -f config.cfg ]; then
+		echo "Could not create new config file, using defaults.."
+	else
+		source config.cfg
+	fi
 fi
 
 
@@ -46,7 +53,7 @@ init
 ## Debugger
 debug()
 {
-	echo "Debugger"
+	echo "Debugger:"
 	echo -e "  USERNAME:\t\t${USERNAME}"
 	echo -e "  CURRENT_USER:\t\t${CURRENT_USER}"
 	echo -e "  TERRARIA_PATH:\t${TERRARIA_PATH}"
@@ -193,7 +200,7 @@ exec_user()
 
 		su $USERNAME -s /bin/bash -c "$1"
 	else							# You are neither
-		echo "Run this script as the $USERNAME user!"
+		echo "Run this script as the $USERNAME user or edit the config.cfg file!"
 		exit 1
 	fi
 }

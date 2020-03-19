@@ -12,7 +12,7 @@ TERRARIA_BINARY=TerrariaServer.bin.x86_64
 
 ## Service
 # Service path
-WRITE_DIR=~/opt/TerrariaService
+WRITE_DIR=/opt/TerrariaService
 
 # User to run the service with
 USERNAME=terraria
