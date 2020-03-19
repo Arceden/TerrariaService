@@ -67,6 +67,7 @@ usage()
 	echo "Commands:"
 	echo -e "  start\t\t Starts the server"
 	echo -e "  stop\t\t Stops the server"
+	echo -e "  state\t\t Displays the server state"
 	echo -e "  kill\t\t Kills the server process"
 	echo -e "  help\t\t Show this help message"
 }
@@ -75,37 +76,52 @@ usage()
 # Check file status
 check_files()
 {
+	PERMISSIONS_ERR=0
+	MISSING_CONFIG=false
+
 	# Service folder permissions
 	## Not using the compact [-w ${WRITE_DIR} so i can test the user]
 	if ! exec_user "test -w ${WRITE_DIR}" ; then
 		echo "Missing write permissions: ${WRITE_DIR}"
 
-		fix_permissions
+		((PERMISSIONS_ERR++))
 	fi
 
 	# Server folder permissions
 	if ! exec_user "test -w ${TERRARIA_PATH}" ; then
 		echo "Missing write permissions: ${TERRARIA_PATH}"
 		
-		fix_permissions
+		((PERMISSIONS_ERR++))
 	fi
 
 	# Terraria server config
 	if ! [ -f ${TERRARIA_CONFIG} ] ; then
 		echo "Missing file: ${TERRARIA_CONFIG}"
-		init_terraria_config
+		MISSING_CONFIG=true
 	elif ! exec_user "test -r ${TERRARIA_CONFIG}" ; then
 		echo "Missing permissions: ${TERRARIA_CONFIG}"
 		
-		fix_permissions
+		((PERMISSIONS_ERR++))
 	fi
 
 	# Terraria executable permissions
 	if ! [ -x ${TERRARIA_PATH}/${TERRARIA_BINARY} ] ; then
 		echo "Missing executable permissions: ${TERRARIA_PATH}/${TERRARIA_BINARY}"
 		
-		fix_permissions
+		((PERMISSIONS_ERR++))
 	fi
+
+	# Fix permissions
+	if ! [ "$PERMISSIONS_ERR" -eq "0" ]; then
+		echo "Found ${PERMISSIONS_ERR} errors!"
+		fix_permissions
+	fi 
+
+	# Create missing files
+	if $MISSING_CONFIG ; then
+		init_terraria_config
+	fi
+
 }
 
 # Attempt to fix the permissions
@@ -116,14 +132,15 @@ fix_permissions()
 		[yY][eE][sS]|[yY]) 
 			
 			# Set user permissions to the whole terraria path
-			chown -R $USERNAME:$USERNAME ${TERRARIA_PATH}
+			sudo chown -R $USERNAME:$USERNAME ${TERRARIA_PATH}
 
 			# Set user permissions to the whole service path
-			chown -R $USERNAME:$USERNAME ${WRITE_DIR}
+			sudo chown -R $USERNAME:$USERNAME ${WRITE_DIR}
 
 			# Set executable permissions on the binary
-			chmod +x ${TERRARIA_PATH}/${TERRARIA_BINARY}
+			sudo chmod +x ${TERRARIA_PATH}/${TERRARIA_BINARY}
 
+			# Check again
 			check_files
 			;;
 		*)
@@ -147,6 +164,9 @@ init_terraria_config()
 			echo "worldname=NewWorld" >> ${TERRARIA_CONFIG}
 
 			echo "Created new file: ${TERRARIA_CONFIG}"
+
+			# Check again
+			check_files
 			;;
 		*)
 			exit 1
@@ -233,12 +253,36 @@ stop_service()
 
 
 # Kill service
-## TODO: Check if service is running
 kill_service()
 {
-	echo "Killing server process.."
-	exec_user "kill -TERM $(cat ${PIDFILE} 2> /dev/null) 2> /dev/null"
-	exec_user "rm ${PIDFILE} 2> /dev/null"
+	if is_running ; then
+		echo "Killing server process.."
+		exec_user "kill -TERM $(cat ${PIDFILE} 2> /dev/null) 2> /dev/null"
+		exec_user "rm ${PIDFILE} 2> /dev/null"
+	fi
+}
+
+
+# Check if server is running
+## Why is 0 true and 1 false?
+is_running()
+{
+	# Check if file does not exists
+	if ! [ -r ${PIDFILE} ]; then
+		return 1
+	fi
+
+	# Check if the process is still running
+	if ! ps --pid $(cat ${PIDFILE}) > /dev/null ; then
+
+		# Process is not running and the PIDFILE should not be here
+		exec_user "rm ${PIDFILE} 2> /dev/null"
+		return 1
+	
+	fi
+
+	# Server up and running
+	return 0
 }
 
 
@@ -271,7 +315,10 @@ check_files
 ## Routing
 case "$1" in
 	start)
-		if ! start_service; then
+		if is_running; then
+			echo "Could not start the terraria server: Server is already running"
+			exit 1
+		elif ! start_service; then
 			echo "Could not start the terraria server"
 			exit 1
 		else
@@ -283,6 +330,13 @@ case "$1" in
 		;;
 	save)
 		save
+		;;
+	state)
+		if is_running ; then
+			echo "Server is up and running"
+		else
+			echo "Server is offline"
+		fi
 		;;
 	help|--help|-h)
 		usage
