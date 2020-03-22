@@ -12,3 +12,7 @@ TimeoutStartSec=20
 ExecStart=/opt/TerrariaService/terraria start
 TimeoutStopSec=20
 ExecStop=/opt/TerrariaService/terraria stop
+
+
+[Install]
+WantedBy=multi-user.target
