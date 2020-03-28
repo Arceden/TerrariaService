@@ -27,16 +27,9 @@ $ systemctl daemon-reload
 # Test the service
 $ systemctl status terraria
 > Active: inactive (dead)
-```
 
-### Sysvinit setup
-```bash
-# Create symbolic link for service commands
-$ ln -s /opt/TerrariaService/terraria.service /etc/init.d/terraria
-
-# Test the command
-$ service terraria state
-> Server is offline
+# Enable auto startup (optional)
+$ systemctl enable terraria
 ```
 
 ### Validate files
