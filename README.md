@@ -32,6 +32,16 @@ $ systemctl status terraria
 $ systemctl enable terraria
 ```
 
+### Local bin
+It is recommended to make a symbolic link in the local bin in order to use the terraria service comands.
+```bash
+# Create symbolic link for the local bin
+$ ln -s /opt/TerrariaService/terraria /usr/local/bin/terraria
+
+# Example usage
+terraria help
+```
+
 ### Validate files
 Before starting the service, run the following command to avoid problems with missing files or wrong permissions. If it does not work, try fixing it manually with ```chown```.
 ```bash
@@ -40,11 +50,14 @@ $ service terraria checkfiles
 ```
 
 ## Usage
-The start command can be used to start the server. The service will prompt to generate new files if any are missing, such as the serverconfig.txt file for the terraria server.
-The automaticly generated serverconfig.txt will enable the terraria server setting "autogenerate" so that a world will automaticly be generated on startup if the world missing.
-
-
-For more information about the commands, execute the help command.
-```bash 
-$ service terraria help
-```
+Available commands
+Command|Description
+-|-
+start|Starts the server
+stop|Stops the server
+save|Saves the server if active
+exit|Saves the world and stops the server
+checkfiles|Validates the service and server files
+state|Displays the server state
+kill|Kills the server process
+help|Shows the help message
