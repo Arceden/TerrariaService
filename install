@@ -1,0 +1,78 @@
+#!/bin/bash
+
+SOURCE=$(dirname ${BASH_SOURCE[0]})
+DESTINATION=/opt/TerrariaService
+
+# Prepare the required directories
+setup_directories()
+{
+    if [ -d $DESTINATION ]; then
+        echo "Directory already exists: $DESTINATION"
+        return 1
+    fi
+
+    if ! confirm "Want to install the service at \"$DESTINATION\"?"; then
+        echo "Aborting."
+        exit 1
+    fi
+
+    sudo mkdir $DESTINATION
+    sudo cp -r $SOURCE/* $DESTINATION
+
+    sudo chown -R $USER:$USER $DESTINATION
+}
+
+# Validate files
+validate_files()
+{
+    $DESTINATION/terraria checkfiles
+}
+
+# Create symbolic links
+setup_links()
+{
+    echo "Creating a symbolic link for the system.d service file."
+
+    if ! [ -f $DESTINATION/terraria.service ] ; then
+        echo "Service file missing? Aborting the system.d setup!"
+    else
+        if ! [ -L /etc/systemd/system/terraria.service ] ; then
+            sudo ln -s /opt/TerrariaService/terraria.service /etc/systemd/system/terraria.service
+            systemctl daemon-reload
+        else
+            echo "Link already exists"
+        fi
+    fi
+
+    echo "Creating a symbolic link for the terraria command"
+
+    if ! [ -f $DESTINATION/terraria ] ; then
+        echo "Terraria file missing in $DESTINATION. Aborting!"
+    else
+        if ! [ -L /usr/local/bin/terraria ] ; then
+            sudo ln -s /opt/TerrariaService/terraria /usr/local/bin/terraria
+        else
+            echo "Link already exists"
+        fi
+    fi
+}
+
+# Confirm the execution
+## Usage: confirm <string>
+## Returns true if y or Y
+confirm()
+{
+    read -p "$1 (y/N) " choice
+    case "$choice" in
+        y|Y )
+            return 0
+            ;;
+        * )
+            return 1
+            ;;
+    esac
+}
+
+setup_directories
+validate_files
+setup_links

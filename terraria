@@ -40,7 +40,8 @@ init()
 	fi
 
 	if [ -z "${WRITE_DIR}" ]; then
-		WRITE_DIR=/opt/terraria-service
+		# WRITE_DIR=/opt/terraria-service	# Default
+		WRITE_DIR=$(dirname ${BASH_SOURCE[0]})	# Retreive the location of this script
 	fi
 
 	if [ -z "${TERRARIA_PATH}" ]; then
@@ -105,6 +106,16 @@ check_files()
 {
 	PERMISSIONS_ERR=0
 	MISSING_CONFIG=false
+
+	# Systemd service file
+	if ! [ -e ${WRITE_DIR}/terraria.service ] ; then
+		# echo "Missing file: terraria.service"
+		echo "Creating a new terraria.service file from example file."
+
+		if ! cp ${WRITE_DIR}/terraria.service.example ${WRITE_DIR}/terraria.service ; then
+			echo "Failed to copy from the example file. (Is the example file missing?)"
+		fi
+	fi
 
 	# Terraria server
 	if ! [ -d ${TERRARIA_PATH} ] ; then

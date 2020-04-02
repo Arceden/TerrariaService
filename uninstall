@@ -1,0 +1,35 @@
+#!/bin/bash
+
+SOURCE=$(dirname ${BASH_SOURCE[0]})
+DESTINATION=/opt/TerrariaService
+
+uninstall()
+{
+    if confirm "Remove the symbolic links?" ; then
+        sudo rm /usr/local/bin/terraria
+        sudo rm /etc/systemd/system/terraria.service
+    fi
+
+    if confirm "Remove the service directory? (Does not remove the actual server)" ; then
+        sudo rm -r /opt/TerrariaService
+    fi  
+}
+
+
+# Confirm the execution
+## Usage: confirm <string>
+## Returns true if y or Y
+confirm()
+{
+    read -p "$1 (y/N) " choice
+    case "$choice" in
+        y|Y )
+            return 0
+            ;;
+        * )
+            return 1
+            ;;
+    esac
+}
+
+uninstall
